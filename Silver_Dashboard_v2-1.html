@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Silver Dashboard v2 — Online</title>
+<style>
+:root{--bg:#070b14;--card:#111827;--card2:#0d1524;--line:#24324b;--txt:#eef4ff;--muted:#91a1ba;--green:#21d07a;--red:#ff5969;--yellow:#ffc857;--blue:#62a8ff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#15213a,#070b14 60%);color:var(--txt);font:14px Inter,Arial,sans-serif}
+.wrap{max-width:1500px;margin:auto;padding:18px}.top{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap}
+h1{margin:0;font-size:28px}.sub{color:var(--muted);margin-top:5px}.actions{display:flex;gap:8px;flex-wrap:wrap}
+button{border:1px solid var(--line);background:#17243a;color:var(--txt);padding:10px 13px;border-radius:9px;cursor:pointer;font-weight:700}
+button.primary{background:var(--blue);color:#06101f;border:0}.status{padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:#0d1524}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}.card{background:rgba(17,24,39,.94);border:1px solid var(--line);border-radius:14px;padding:15px}
+.hero{grid-column:span 2}.wide{grid-column:span 4}.half{grid-column:span 2}.muted{color:var(--muted)}.big{font-size:30px;font-weight:800;margin:7px 0}.up{color:var(--green)}.down{color:var(--red)}.warn{color:var(--yellow)}
+.signal{display:flex;align-items:center;gap:20px}.circle{width:120px;height:120px;border-radius:50%;display:grid;place-items:center;border:9px solid var(--green);font-size:26px;font-weight:800}.bar{height:9px;background:#202b40;border-radius:10px;overflow:hidden;margin:10px 0}.fill{height:100%;background:var(--green);width:50%}
+table{width:100%;border-collapse:collapse}td,th{padding:9px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--muted);font-weight:500}
+.pill{display:inline-block;padding:5px 8px;border-radius:8px;background:#18243a}.green{background:#103624;color:var(--green)}.red{background:#3a121b;color:var(--red)}.yellow{background:#3a2c0b;color:var(--yellow)}
+.chart{height:210px;position:relative}.chart canvas{width:100%;height:100%}
+.note{font-size:12px;color:var(--muted);line-height:1.45}.setup{display:none;position:fixed;inset:0;background:#0009;z-index:10;align-items:center;justify-content:center;padding:20px}.modal{max-width:620px;width:100%;background:#101827;border:1px solid var(--line);border-radius:16px;padding:20px}.modal input{width:100%;margin:6px 0 12px;padding:11px;background:#09111e;color:#fff;border:1px solid var(--line);border-radius:8px}.footer{margin-top:14px;color:var(--muted);font-size:12px}
+@media(max-width:1000px){.grid{grid-template-columns:repeat(2,1fr)}.wide{grid-column:span 2}}
+@media(max-width:600px){.grid{grid-template-columns:1fr}.hero,.wide,.half{grid-column:span 1}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div><h1>🥈 Silver Dashboard v2</h1><div class="sub">ONLINE • COMEX SI + рынок + макро + алгоритмический сигнал</div></div>
+    <div class="actions"><span class="status" id="status">● подключение…</span><button onclick="refreshAll()">↻ Обновить</button><button onclick="openSetup()">⚙ API</button></div>
+  </div>
+
+  <div class="grid">
+    <div class="card hero">
+      <div class="muted">СВОДНЫЙ SIGNAL ENGINE</div>
+      <div class="signal">
+        <div class="circle" id="prob">50%</div>
+        <div style="flex:1">
+          <div class="big" id="signal">NEUTRAL</div>
+          <div>LONG <b id="lp">50%</b> • SHORT <b id="sp">50%</b></div>
+          <div class="bar"><div class="fill" id="fill"></div></div>
+          <div class="muted" id="strength">Сила: 5.0/10</div>
+        </div>
+      </div>
+      <div class="note" id="reason">Ждём данные…</div>
+    </div>
+
+    <div class="card"><div class="muted">🥈 SILVER SI</div><div class="big" id="si">—</div><div id="sich">—</div><div class="note">Источник: Yahoo Finance chart API • котировка может быть задержанной.</div></div>
+    <div class="card"><div class="muted">🥇 GOLD GC</div><div class="big" id="gc">—</div><div id="gcch">—</div></div>
+    <div class="card"><div class="muted">💵 DXY</div><div class="big" id="dxy">—</div><div id="dxys">—</div></div>
+    <div class="card"><div class="muted">🟠 COPPER</div><div class="big" id="hg">—</div><div id="hgch">—</div></div>
+
+    <div class="card"><div class="muted">US 10Y</div><div class="big" id="t10">—</div><div class="note">рост доходности обычно давит на серебро</div></div>
+    <div class="card"><div class="muted">US 2Y</div><div class="big" id="t2">—</div><div class="note">ожидания денежной политики</div></div>
+    <div class="card"><div class="muted">REAL 10Y</div><div class="big" id="real">—</div><div class="note">реальная доходность TIPS</div></div>
+    <div class="card"><div class="muted">FED FUNDS</div><div class="big" id="fed">—</div><div class="note">effective federal funds rate</div></div>
+
+    <div class="card half">
+      <div class="muted">📊 ФАКТОРЫ МОДЕЛИ</div>
+      <table><thead><tr><th>Фактор</th><th>Значение</th><th>Сигнал</th><th>Вес</th></tr></thead><tbody id="factors"></tbody></table>
+    </div>
+
+    <div class="card half">
+      <div class="muted">📅 МАКРО</div>
+      <table><thead><tr><th>Показатель</th><th>Последнее</th><th>Дата</th></tr></thead><tbody id="macro"></tbody></table>
+      <div class="note">FRED требует личный API key. Он хранится только в браузере.</div>
+    </div>
+
+    <div class="card half">
+      <div class="muted">📈 SILVER — 1H</div>
+      <div class="chart"><canvas id="chart"></canvas></div>
+    </div>
+
+    <div class="card half">
+      <div class="muted">🎯 ТОРГОВЫЙ СЦЕНАРИЙ</div>
+      <div id="scenario" style="line-height:1.65">Ждём котировку…</div>
+    </div>
+
+    <div class="card wide">
+      <div class="muted">⚠️ РИСК-КОНТРОЛЬ</div>
+      <div id="risk" style="margin-top:8px">Данные загружаются.</div>
+      <div class="note" style="margin-top:10px">Сигнал является статистической моделью факторов, а не гарантией движения рынка. Перед сделкой проверяй стакан, ликвидность, спред и актуальную котировку у своего брокера.</div>
+    </div>
+  </div>
+  <div class="footer">Автообновление: 60 секунд • Последнее обновление: <span id="updated">—</span></div>
+</div>
+
+<div class="setup" id="setup">
+ <div class="modal">
+  <h2 style="margin-top:0">⚙ Подключение API</h2>
+  <p class="note">Для котировок используется Yahoo Finance chart endpoint. Для макроэкономики — официальный FRED API. FRED требует персональный 32-символьный API key. Ключ сохраняется в localStorage этого браузера.</p>
+  <label class="small muted">FRED API key</label>
+  <input id="fredKey" placeholder="вставь свой FRED API key">
+  <button class="primary" onclick="saveSetup()">Сохранить и обновить</button>
+  <button onclick="closeSetup()">Закрыть</button>
+  <p class="note">Получить ключ можно через аккаунт FRED. Не публикуй его в GitHub или в открытом коде.</p>
+ </div>
+</div>
+
+<script>
+const FRED='https://api.stlouisfed.org/fred/series/observations';
+const symbols={si:'SI=F',gc:'GC=F',dxy:'DX-Y.NYB',hg:'HG=F'};
+const macroSeries={
+  t10:'DGS10',t2:'DGS2',real:'DFII10',fed:'DFF',
+  cpi:'CPIAUCSL',pce:'PCEPI',unrate:'UNRATE',payems:'PAYEMS'
+};
+let state={quotes:{},macro:{},score:50};
+
+function $(id){return document.getElementById(id)}
+function fmt(v,d=3){return v==null||!isFinite(v)?'—':Number(v).toFixed(d)}
+function cls(x){return x>0?'up':x<0?'down':'warn'}
+function esc(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+
+async function yahoo(symbol,interval='1h',range='5d'){
+ const u='https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(symbol)+'?range='+range+'&interval='+interval+'&includePrePost=true';
+ const r=await fetch(u); if(!r.ok) throw Error('Yahoo HTTP '+r.status); const j=await r.json(); const x=j.chart.result?.[0];
+ if(!x) throw Error('Нет данных '+symbol);
+ const q=x.indicators.quote[0], ts=x.timestamp||[];
+ let i=q.close.length-1; while(i>=0 && q.close[i]==null)i--;
+ let p=q.close[i], prev=i-1; while(prev>=0 && q.close[prev]==null)prev--;
+ let ch=prev>=0?(p/q.close[prev]-1)*100:null;
+ return {price:p,ch,ts,q};
+}
+
+async function fred(id){
+ const key=localStorage.getItem('fredKey')||'';
+ if(!key) return null;
+ const u=FRED+'?series_id='+id+'&api_key='+encodeURIComponent(key)+'&file_type=json&sort_order=desc&limit=2';
+ const r=await fetch(u); if(!r.ok) throw Error('FRED HTTP '+r.status);
+ const j=await r.json(); const o=(j.observations||[]).find(x=>x.value!=='.');
+ return o?{value:Number(o.value),date:o.date}:null;
+}
+
+async function refreshQuotes(){
+ const out={};
+ await Promise.all(Object.entries(symbols).map(async([k,s])=>{try{out[k]=await yahoo(s)}catch(e){out[k]={error:e.message}}}));
+ state.quotes=out;
+ $('si').textContent=fmt(out.si?.price); $('sich').innerHTML=chg(out.si?.ch);
+ $('gc').textContent=fmt(out.gc?.price); $('gcch').innerHTML=chg(out.gc?.ch);
+ $('dxy').textContent=fmt(out.dxy?.price); $('dxys').innerHTML=chg(out.dxy?.ch);
+ $('hg').textContent=fmt(out.hg?.price); $('hgch').innerHTML=chg(out.hg?.ch);
+ if(out.si?.q) drawChart(out.si);
+}
+
+function chg(v){if(v==null||!isFinite(v))return '—';return '<span class="'+cls(v)+'">'+(v>=0?'▲ ':'▼ ')+Math.abs(v).toFixed(2)+'%</span>'}
+
+async function refreshMacro(){
+ const m={};
+ for(const [k,id] of Object.entries(macroSeries)){try{m[k]=await fred(id)}catch(e){m[k]=null}}
+ state.macro=m;
+ $('t10').textContent=m.t10?fmt(m.t10.value,2)+'%':'—';
+ $('t2').textContent=m.t2?fmt(m.t2.value,2)+'%':'—';
+ $('real').textContent=m.real?fmt(m.real.value,2)+'%':'—';
+ $('fed').textContent=m.fed?fmt(m.fed.value,2)+'%':'—';
+ const names=[['CPI','cpi'],['PCE','pce'],['Безработица','unrate'],['Payrolls','payems']];
+ $('macro').innerHTML=names.map(([n,k])=>`<tr><td>${n}</td><td>${m[k]?fmt(m[k].value,2):'—'}</td><td>${m[k]?.date||'—'}</td></tr>`).join('');
+}
+
+function signal(){
+ let s=0, reasons=[];
+ const q=state.quotes,m=state.macro;
+ function add(name,points,weight,value){s+=points*weight; factors.push([name,value,points>0?'LONG':points<0?'SHORT':'NEUTRAL',weight])}
+ const factors=[];
+ if(q.dxy?.ch!=null)add('DXY',q.dxy.ch<0?1:-1,2,(q.dxy.ch>=0?'+':'')+q.dxy.ch.toFixed(2)+'%');
+ else add('DXY',0,2,'—');
+ if(q.gc?.ch!=null)add('Gold',q.gc.ch>0?1:-1,2,(q.gc.ch>=0?'+':'')+q.gc.ch.toFixed(2)+'%');
+ else add('Gold',0,2,'—');
+ if(q.hg?.ch!=null)add('Copper',q.hg.ch>0?1:-1,1,(q.hg.ch>=0?'+':'')+q.hg.ch.toFixed(2)+'%');
+ else add('Copper',0,1,'—');
+ if(m.t10?.value!=null)add('US 10Y',m.t10.value<4?1:-1,2,fmt(m.t10.value,2)+'%'); else add('US 10Y',0,2,'—');
+ if(m.real?.value!=null)add('Real 10Y',m.real.value<1.8?1:-1,2,fmt(m.real.value,2)+'%'); else add('Real 10Y',0,2,'—');
+ if(q.si?.ch!=null)add('Momentum SI',q.si.ch>0?1:-1,2,(q.si.ch>=0?'+':'')+q.si.ch.toFixed(2)+'%'); else add('Momentum SI',0,2,'—');
+ const raw=s/11; const p=Math.max(15,Math.min(85,50+raw*25)); state.score=p;
+ $('prob').textContent=Math.round(p)+'%';$('lp').textContent=Math.round(p)+'%';$('sp').textContent=Math.round(100-p)+'%';
+ $('fill').style.width=Math.round(p)+'%';$('fill').style.background=p>=55?'var(--green)':p<=45?'var(--red)':'var(--yellow)';
+ const sig=p>=55?'LONG':p<=45?'SHORT':'NEUTRAL'; $('signal').textContent=sig; $('signal').className='big '+(sig==='LONG'?'up':sig==='SHORT'?'down':'warn');
+ $('prob').style.borderColor=sig==='LONG'?'var(--green)':sig==='SHORT'?'var(--red)':'var(--yellow)';
+ $('strength').textContent='Сила: '+(Math.abs(p-50)/5+5).toFixed(1)+'/10';
+ reasons.push(sig==='LONG'?'позитивные факторы перевешивают негативные':sig==='SHORT'?'негативные факторы перевешивают позитивные':'факторы смешанные');
+ $('reason').textContent=reasons.join(' • ');
+ $('factors').innerHTML=factors.map(x=>`<tr><td>${esc(x[0])}</td><td>${esc(x[1])}</td><td><span class="pill ${x[2]=='LONG'?'green':x[2]=='SHORT'?'red':'yellow'}">${x[2]}</span></td><td>${x[3]}</td></tr>`).join('');
+ const price=q.si?.price;
+ $('scenario').innerHTML=price?`<b>Цена:</b> ${fmt(price)}<br><b class="up">LONG:</b> искать подтверждение выше локального high.<br><b class="down">SHORT:</b> искать подтверждение ниже локального low.<br><b>Фильтр:</b> не входить вслепую перед сильной статистикой.`:'Нет котировки SI.';
+ const missing=!localStorage.getItem('fredKey');
+ $('risk').innerHTML=missing?'<span class="pill yellow">FRED НЕ ПОДКЛЮЧЕН</span> — добавь ключ через ⚙ API, иначе макрофакторы не участвуют в расчёте.':'<span class="pill green">ONLINE</span> — котировки и FRED обновляются автоматически.';
+}
+
+function drawChart(x){
+ const c=$('chart'),ctx=c.getContext('2d'),dpr=devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;
+ c.width=w*dpr;c.height=h*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+ const vals=x.q.close.filter(v=>v!=null).slice(-80); if(vals.length<2)return;
+ const min=Math.min(...vals),max=Math.max(...vals),pad=12;
+ ctx.strokeStyle='#26344f';ctx.lineWidth=1;
+ for(let i=0;i<5;i++){let y=pad+i*(h-2*pad)/4;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+ ctx.strokeStyle=vals.at(-1)>=vals[0]?'#21d07a':'#ff5969';ctx.lineWidth=2;ctx.beginPath();
+ vals.forEach((v,i)=>{let px=i*(w-4)/(vals.length-1)+2,py=h-pad-(v-min)/(max-min||1)*(h-2*pad);i?ctx.lineTo(px,py):ctx.moveTo(px,py)});ctx.stroke();
+}
+
+async function refreshAll(){
+ $('status').textContent='● обновление…';
+ try{await refreshQuotes();await refreshMacro();signal();$('status').textContent='● ONLINE';$('status').style.color='var(--green)'}catch(e){$('status').textContent='● частично';$('status').style.color='var(--yellow)';console.error(e)}
+ $('updated').textContent=new Date().toLocaleString('ru-RU');
+}
+function openSetup(){$('setup').style.display='flex';$('fredKey').value=localStorage.getItem('fredKey')||''}
+function closeSetup(){$('setup').style.display='none'}
+function saveSetup(){localStorage.setItem('fredKey',$('fredKey').value.trim());closeSetup();refreshAll()}
+refreshAll();setInterval(refreshAll,60000);
+</script>
+</body>
+</html>
